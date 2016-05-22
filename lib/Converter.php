@@ -10,17 +10,16 @@
 class Converter {
 	/**
 	 * object name for php functions
-	 * 
+	 *
 	 * @var string
 	 */
 	private $phpLibName='php';
+	private $anyType='ref'; // Any
+	private $extendClassName='script'; // 'PHPObject';
+	private $globals=array('argv','_GLOBALS','_SERVER','_SESSION','_GET');
 
-	private $anyType='ref';
-
-	private $extendClassName = 'obj';//'PHPObject';
-	
 	function is_global($var) {
-		return in_array($var, array('argv','_GLOBALS','_SERVER','_SESSION','_GET'));
+		return in_array($var, $this->globals);
 	}
 
 	function match($token1, $ttype) {
@@ -47,11 +46,14 @@ class Converter {
 	}
 
 	function skip_thru(&$T, $ttype) {
+		$s='';
 		while ( !$this->match($T[0], $ttype) ) {
+			$s.=is_array($T[0]) ? $T[0][VALUE]:$T[0];
 			if (!count($T)) throw new Exception();
 			array_shift($T);
 		}
 		array_shift($T);
+		return $s;
 	}
 
 	function display($token) {
@@ -175,7 +177,7 @@ class Converter {
 		return "\n$init_expr;\nwhile($cond_expr) {\n $body_stmt;\n$term_expr\n}\n";
 	}
 
-	function scan_vars($T) { /* type inference and variable declaration */
+	function scan_vars($T,$setGlobal=false) { /* type inference and variable declaration */
 		$out='';
 		$vars=array();
 		
@@ -203,6 +205,7 @@ class Converter {
 				if (!isset($vars[$name]) && !$this->is_global($name)) {
 					$out.="\nvar $name: $type = $default;";
 					$vars[$name]=1;
+					if ($setGlobal) $this->globals[]=$name;
 				}
 			} else {
 				array_shift($T);
@@ -217,7 +220,13 @@ class Converter {
 		$global=array();
 		
 		while ( count($T) ) {
-			if ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
+			if ($this->match($T[0], T_GLOBAL)) {
+				// detect globals from global keyword
+				while ( count($T) && !$this->match($T[0], ';') ) {
+					if ($this->match($T[0], T_VARIABLE)) $this->globals[]=$this->parse($T);
+					else $t=array_shift($T);
+				}
+			} elseif ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
 				// skip over non-global scope
 				do {
 					$t=array_shift($T);
@@ -227,16 +236,17 @@ class Converter {
 				$global[]=array_shift($T);
 			}
 		}
-		return $this->scan_vars($global);
+		return $this->scan_vars($global,true);
 	}
 
 	function parse_f_args(&$T) {
 		$out='';
 		while ( $T[0] != '{' ) {
 			$prev=$T[0];
-			$out.=$this->parse($T);
+			$c=$this->parse($T);
+			if ($c!='&') $out.=$c;
 			if ($prev[TTYPE] == T_VARIABLE) {
-				$out.=' : '.$this->anyType;
+				$out.=' : ' . $this->anyType;
 			}
 		}
 		return $out;
@@ -251,7 +261,7 @@ class Converter {
 		$body=$this->fetch_block($T);
 		
 		if ($this->contains($body, T_RETURN)) {
-			$out.=' : '.$this->anyType.' = ';
+			$out.=' : ' . $this->anyType . ' = ';
 		}
 		$vars=$this->scan_vars($body);
 		return $out . '{' . $vars . "\n" . $this->parse_all($body) . '}';
@@ -264,7 +274,7 @@ class Converter {
 		}
 		while ( $T[0] != ';' ) {
 			if ($T[0][TTYPE] == T_VARIABLE) {
-				$out.=$scope . 'var ' . $this->parse($T) . ' : '.$this->anyType.' = null;';
+				$out.=$scope . 'var ' . $this->parse($T) . ' : ' . $this->anyType . ' = null;';
 			} else {
 				array_shift($T);
 			}
@@ -303,7 +313,7 @@ class Converter {
 		$out='def __construct ';
 		$out.=$this->parse_f_args($T);
 		$this->expect($T, '{');
-		$out.=' : '.$this->anyType.' = {';
+		$out.=' : ' . $this->anyType . ' = {';
 		$out.=$this->parse_block_tail($T);
 		$out.="\nthis;\n}";
 		return $out;
@@ -344,7 +354,7 @@ class Converter {
 			}
 			$classCodePrefix.=$parsedToken;
 		}
-		$classCodePrefix.=' ' . ($containsExtends ? 'with' : 'extends') . ' '.$this->extendClassName.' ' . $this->parse($T);
+		$classCodePrefix.=' ' . ($containsExtends ? 'with' : 'extends') . ' ' . $this->extendClassName . ' ' . $this->parse($T);
 		$classCode='';
 		
 		$objectCodePrefix="object $className {";
@@ -381,9 +391,9 @@ class Converter {
 				}
 				if ($isFunction) {
 					$out=$this->peek_whitespace($block);
-					if ($this->match($block[0],T_DOC_COMMENT) || $this->match($block[0],T_COMMENT)) { 
-						$out.=$this->parse($block);
-						continue;
+					if ($this->match($block[0], T_DOC_COMMENT) || $this->match($block[0], T_COMMENT)) {
+						$out.=$this->parse($block)."\n";
+						array_shift($block);
 					}
 					$this->expect($block, T_FUNCTION);
 					$out.=$this->parse_function($block, $scope);
@@ -571,7 +581,7 @@ class Converter {
 				$this->expect($T, '(');
 				$this->skip($T, T_WHITESPACE);
 				$var='';
-				while (!$this->match($T[0],T_AS)) {
+				while ( !$this->match($T[0], T_AS) ) {
 					$var.=$this->parse($T);
 				}
 				$this->expect($T, T_AS);
@@ -639,6 +649,21 @@ class Converter {
 			
 			case T_ELSEIF : // elseif elseif
 				return 'else if';
+			case T_GLOBAL : // skip over global variable scope
+				$global='';
+				$s='// global';
+				while ( count($T) && !$this->match($T[0], ';') ) {
+					$t=array_shift($T);
+					$s.=is_array($t)?$t[VALUE]:$t;
+				}
+				if (count($T)) array_shift($T);
+				return $s;
+			case T_REQUIRE : // require() require()
+			case T_REQUIRE_ONCE : // require_once() require_once()
+			case T_INCLUDE : // include() include()
+			case T_INCLUDE_ONCE : // include_once() include_once()
+				$s='// '.$t[VALUE].$this->skip_thru($T, ';');
+				return $s;
 			case T_COMMENT : // // or #, and /* */ in PHP 5 comments
 			case T_ABSTRACT : // abstract Class Abstraction (available since PHP 5.0.0)
 			case T_AND_EQUAL : // &= assignment operators
@@ -682,13 +707,10 @@ class Converter {
 			case T_FILE : // __FILE__ magic constants
 			case T_FINAL : // final Final Keyword (available since PHP 5.0.0)
 			case T_FUNC_C : // __FUNCTION__ magic constants (available since PHP 4.3.0)
-			case T_GLOBAL : // global variable scope
 			case T_GOTO : // goto (available since PHP 5.3.0)
 			case T_HALT_COMPILER : // __halt_compiler() __halt_compiler (available since PHP 5.1.0)
 			case T_IF : // if if
 			case T_IMPLEMENTS : // implements Object Interfaces (available since PHP 5.0.0)
-			case T_INCLUDE : // include() include()
-			case T_INCLUDE_ONCE : // include_once() include_once()
 			case T_INLINE_HTML : // text outside PHP
 			case T_INSTANCEOF : // instanceof type operators (available since PHP 5.0.0)
 			case T_INT_CAST : // (int) or (integer) type-casting
@@ -721,8 +743,6 @@ class Converter {
 			case T_PRIVATE : // private classes and objects (available since PHP 5.0.0)
 			case T_PUBLIC : // public classes and objects (available since PHP 5.0.0)
 			case T_PROTECTED : // protected classes and objects (available since PHP 5.0.0)
-			case T_REQUIRE : // require() require()
-			case T_REQUIRE_ONCE : // require_once() require_once()
 			case T_RETURN : // return returning values
 			case T_SL : // << bitwise operators
 			case T_SL_EQUAL : // <<= assignment operators
@@ -764,8 +784,8 @@ class Converter {
 	public function convert($code) {
 		$T=token_get_all($code);
 		$result='';
-		$result.='import php._;'.chr(10);
-		$result.='import scala.Predef.{ any2ArrowAssoc => _ }'.chr(10);
+		$result.="import php._;\n";
+		$result.="import scala.Predef.{ any2ArrowAssoc => _ }\n\n";
 		
 		$result.=$this->scan_globals($T);
 		$result.=$this->parse_all($T);
