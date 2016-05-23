@@ -1,19 +1,31 @@
-[![Build Status](https://secure.travis-ci.org/kbinani/php2scala.png)](http://travis-ci.org/kbinani/php2scala)
 # What is 'php2scala' ?
 
-* convert php code to scala.
+* Converts php code to scala.
 * This project is a fork of 'php-to-scala-migration-helper', http://code.google.com/p/php-to-scala-migration-helper/
 
-# Design
-Below is a description of the some of the more interesting transformations that are performed in the conversion from PHP to Scala.
-
-## PHP Built-In Functions
+# Getting started
 
 PHP has a standard library with thousands of built-in functions and extensions. Luckily for us, an Open Source Java implementation of those functions has existed for some time - as a feature known as Quercus buried inside the Caucho Resin application server.
 
-php-to-scala is currently bundled with version 4.0.6 of the Quercus/Resin Jars. At build time, a script (mklib.sh) scans the Quercus source to produce a more transparent façade to the Quercus libraries: Every PHP function is automatically in scope for subclasses of php.script which is defined in php.scala. This is all then packaged into php-scala.jar.
+The Ant script (build.xml) scans the Quercus source to produce a more transparent façade to the Quercus libraries: every PHP function is automatically in scope for subclasses of php.script which is defined in php.scala. This is all then packaged into php-scala.jar.
 
 The functions are made available directly by name and with the same parameter signatures in the converted Scala code as in the original PHP script. In other words, the converted Scala code really looks identical to the PHP code, in regards to the use of built-in functions.
+
+## Generate the php-scala.jar
+
+Run 
+```
+export SCALA_HOME='...'
+ant -Dquercus.src='...' -Dlib='...'
+```
+
+where:
+* SCALA_HOME is the home directory of your Scala installation. For example for Scala installed on OSX with brew, this is '/usr/local/opt/scala/libexec'
+* quercus.src is the directory containing the Quercus source (latest version can be downloaded from http://quercus.caucho.com/)
+* lib is the destination directory where the php-scala.jar will be generated but also the directory containing the required libraries quercus.jar and javaee-16.jar 
+
+# Notes
+Below is a description of the some of the more interesting transformations that are performed in the conversion from PHP to Scala.
 
 ## for loop
 
