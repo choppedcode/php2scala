@@ -16,7 +16,9 @@ class Converter {
 	private $phpLibName='php';
 	private $anyType='ref'; // Any
 	private $extendClassName='script'; // 'PHPObject';
-	private $globals=array('argv','_GLOBALS','_SERVER','_SESSION','_GET');
+	private $globals=array('argv','_GLOBALS','_SERVER','_SESSION','_GET','_COOKIE');
+	private $classVars=array();
+	private $classMethods=array();
 
 	function is_global($var) {
 		return in_array($var, $this->globals);
@@ -48,7 +50,7 @@ class Converter {
 	function skip_thru(&$T, $ttype) {
 		$s='';
 		while ( !$this->match($T[0], $ttype) ) {
-			$s.=is_array($T[0]) ? $T[0][VALUE]:$T[0];
+			$s.=is_array($T[0]) ? $T[0][VALUE] : $T[0];
 			if (!count($T)) throw new Exception();
 			array_shift($T);
 		}
@@ -177,7 +179,7 @@ class Converter {
 		return "\n$init_expr;\nwhile($cond_expr) {\n $body_stmt;\n$term_expr\n}\n";
 	}
 
-	function scan_vars($T,$setGlobal=false) { /* type inference and variable declaration */
+	function scan_vars($T, $setGlobal=false) { /* type inference and variable declaration */
 		$out='';
 		$vars=array();
 		
@@ -236,15 +238,16 @@ class Converter {
 				$global[]=array_shift($T);
 			}
 		}
-		return $this->scan_vars($global,true);
+		return $this->scan_vars($global, true);
 	}
 
 	function parse_f_args(&$T) {
 		$out='';
 		while ( $T[0] != '{' ) {
 			$prev=$T[0];
+			if ($this->match($T[0],'(')) $this->classMethods[]=trim($out);
 			$c=$this->parse($T);
-			if ($c!='&') $out.=$c;
+			if ($c != '&') $out.=$c;
 			if ($prev[TTYPE] == T_VARIABLE) {
 				$out.=' : ' . $this->anyType;
 			}
@@ -274,7 +277,9 @@ class Converter {
 		}
 		while ( $T[0] != ';' ) {
 			if ($T[0][TTYPE] == T_VARIABLE) {
-				$out.=$scope . 'var ' . $this->parse($T) . ' : ' . $this->anyType . ' = null;';
+				$var=$this->parse($T);
+				$this->classVars[]=$var;
+				$out.=$scope . 'var ' . $var . ' : ' . $this->anyType . ' = null;';
 			} else {
 				array_shift($T);
 			}
@@ -289,7 +294,12 @@ class Converter {
 			$scope.=' ';
 		}
 		while ( $T[0] != ';' ) {
-			$out.=$this->parse($T);
+			if ($this->match($T[0], T_VARIABLE)) {
+				$var=$this->parse($T);
+				$this->classVars[]=$var;
+				$out.=$var;
+			} else
+				$out.=$this->parse($T);
 		}
 		$out=$scope . 'val ' . $out . ';';
 		array_shift($T);
@@ -342,6 +352,8 @@ class Converter {
 	}
 
 	function parse_class(&$T) {
+		$this->classVars=array();
+		$this->classMethods=array();
 		$this->skip($T, T_WHITESPACE);
 		$className=$this->parse($T);
 		
@@ -357,7 +369,7 @@ class Converter {
 		$classCodePrefix.=' ' . ($containsExtends ? 'with' : 'extends') . ' ' . $this->extendClassName . ' ' . $this->parse($T);
 		$classCode='';
 		
-		$objectCodePrefix="object $className {";
+		$objectCodePrefix="object $className extends {$this->extendClassName} {";
 		$objectCode='';
 		$body=$this->fetch_block($T);
 		
@@ -392,7 +404,7 @@ class Converter {
 				if ($isFunction) {
 					$out=$this->peek_whitespace($block);
 					if ($this->match($block[0], T_DOC_COMMENT) || $this->match($block[0], T_COMMENT)) {
-						$out.=$this->parse($block)."\n";
+						$out.=$this->parse($block) . "\n";
 						array_shift($block);
 					}
 					$this->expect($block, T_FUNCTION);
@@ -421,6 +433,11 @@ class Converter {
 		$result=$classCodePrefix . $classCode . PHP_EOL . '}' . PHP_EOL;
 		if ($objectCode !== '') {
 			$result.=$objectCodePrefix . $objectCode . PHP_EOL . '}' . PHP_EOL;
+		}
+		
+		$common=array_intersect($this->classVars,$this->classMethods);
+		if (count($common)) {
+			trigger_error('Methods and variables with the same name defined here: '.implode(',',$common),E_USER_WARNING);
 		}
 		return $result;
 	}
@@ -533,6 +550,8 @@ class Converter {
 					} else {
 						return 'this';
 					}
+				} elseif ($t[VALUE]=='$class') {
+					return 'theClass';
 				} else {
 					return substr($t[VALUE], 1); // strip the $
 				}
@@ -654,7 +673,7 @@ class Converter {
 				$s='// global';
 				while ( count($T) && !$this->match($T[0], ';') ) {
 					$t=array_shift($T);
-					$s.=is_array($t)?$t[VALUE]:$t;
+					$s.=is_array($t) ? $t[VALUE] : $t;
 				}
 				if (count($T)) array_shift($T);
 				return $s;
@@ -662,7 +681,7 @@ class Converter {
 			case T_REQUIRE_ONCE : // require_once() require_once()
 			case T_INCLUDE : // include() include()
 			case T_INCLUDE_ONCE : // include_once() include_once()
-				$s='// '.$t[VALUE].$this->skip_thru($T, ';');
+				$s='// ' . $t[VALUE] . $this->skip_thru($T, ';');
 				return $s;
 			case T_COMMENT : // // or #, and /* */ in PHP 5 comments
 			case T_ABSTRACT : // abstract Class Abstraction (available since PHP 5.0.0)
