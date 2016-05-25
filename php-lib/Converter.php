@@ -8,6 +8,9 @@
  *
  */
 class Converter {
+	var $firstPass=true;
+	var $package;
+	var $packagesToInclude=array();
 	/**
 	 * object name for php functions
 	 *
@@ -15,10 +18,13 @@ class Converter {
 	 */
 	private $phpLibName='php';
 	private $anyType='ref'; // Any
-	private $extendClassName='script'; // 'PHPObject';
-	private $globals=array('argv','_GLOBALS','_SERVER','_SESSION','_GET','_COOKIE');
+	private $extendClassName='script with Constants'; // 'PHPObject';
+	var $globals=array('argv','_GLOBALS','_SERVER','_SESSION','_GET','_COOKIE','_REQUEST','_POST');
+	var $predefined=array('argv','_GLOBALS','_SERVER','_SESSION','_GET','_COOKIE','_REQUEST','_POST');
 	private $classVars=array();
 	private $classMethods=array();
+	var $constants=array();
+	var $globs=array();
 
 	function is_global($var) {
 		return in_array($var, $this->globals);
@@ -186,7 +192,9 @@ class Converter {
 		while ( count($T) ) {
 			if ($this->match($T[0], T_VARIABLE)) {
 				
-				$name=$this->parse($T);
+				// $name=$this->parse($T);
+				$name=substr($T[0][VALUE], 1);
+				array_shift($T);
 				$this->skip($T, T_WHITESPACE);
 				$t=array_shift($T);
 				
@@ -207,7 +215,7 @@ class Converter {
 				if (!isset($vars[$name]) && !$this->is_global($name)) {
 					$out.="\nvar $name: $type = $default;";
 					$vars[$name]=1;
-					if ($setGlobal) $this->globals[]=$name;
+					if ($setGlobal) $this->addGlobal($name);
 				}
 			} else {
 				array_shift($T);
@@ -222,13 +230,7 @@ class Converter {
 		$global=array();
 		
 		while ( count($T) ) {
-			if ($this->match($T[0], T_GLOBAL)) {
-				// detect globals from global keyword
-				while ( count($T) && !$this->match($T[0], ';') ) {
-					if ($this->match($T[0], T_VARIABLE)) $this->globals[]=$this->parse($T);
-					else $t=array_shift($T);
-				}
-			} elseif ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
+			if ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
 				// skip over non-global scope
 				do {
 					$t=array_shift($T);
@@ -240,12 +242,34 @@ class Converter {
 		}
 		return $this->scan_vars($global, true);
 	}
+	
+	// detect globals from global keyword
+	function scan_global_keyword($T) {
+		while ( count($T) ) {
+			if ($this->match($T[0], T_GLOBAL)) {
+				while ( count($T) && !$this->match($T[0], ';') ) {
+					if ($this->match($T[0], T_VARIABLE)) $this->addGlobal($this->parse($T));
+					else $t=array_shift($T);
+				}
+			}
+			$t=array_shift($T);
+		}
+	}
+
+	function addGlobal($global) {
+		if ($this->firstPass && !in_array($global, $this->globals)) $this->globals[]=$global;
+	}
+
+	function addConstant($constant) {
+		$constant=str_replace(array("'",'"'), array("",''), $constant);
+		if (!in_array($constant, $this->constants)) $this->constants[]=$constant;
+	}
 
 	function parse_f_args(&$T) {
 		$out='';
 		while ( $T[0] != '{' ) {
 			$prev=$T[0];
-			if ($this->match($T[0],'(')) $this->classMethods[]=trim($out);
+			if ($this->match($T[0], '(')) $this->classMethods[]=trim($out);
 			$c=$this->parse($T);
 			if ($c != '&') $out.=$c;
 			if ($prev[TTYPE] == T_VARIABLE) {
@@ -308,7 +332,8 @@ class Converter {
 
 	function parse_echo(&$T) {
 		$t=array_shift($T);
-		return $this->phpLibName . '.echo(' . $this->parse_expr_tail($T) . ')';
+		return 'echo(' . $this->parse_expr_tail($T) . ')';
+		// return $this->phpLibName . '.echo(' . $this->parse_expr_tail($T) . ')';
 	}
 
 	function parse_new(&$T) {
@@ -352,6 +377,7 @@ class Converter {
 	}
 
 	function parse_class(&$T) {
+		$this->globs=$this->predefined;
 		$this->classVars=array();
 		$this->classMethods=array();
 		$this->skip($T, T_WHITESPACE);
@@ -366,7 +392,8 @@ class Converter {
 			}
 			$classCodePrefix.=$parsedToken;
 		}
-		$classCodePrefix.=' ' . ($containsExtends ? 'with' : 'extends') . ' ' . $this->extendClassName . ' ' . $this->parse($T);
+		if (!$containsExtends) $classCodePrefix.=' ' . ($containsExtends ? 'with' : 'extends') . ' ' . $this->extendClassName . ' ' . $this->parse($T);
+		else $classCodePrefix.=$this->parse($T);
 		$classCode='';
 		
 		$objectCodePrefix="object $className extends {$this->extendClassName} {";
@@ -435,10 +462,11 @@ class Converter {
 			$result.=$objectCodePrefix . $objectCode . PHP_EOL . '}' . PHP_EOL;
 		}
 		
-		$common=array_intersect($this->classVars,$this->classMethods);
+		$common=array_intersect($this->classVars, $this->classMethods);
 		if (count($common)) {
-			trigger_error('Methods and variables with the same name defined here: '.implode(',',$common),E_USER_WARNING);
+			trigger_error('Methods and variables with the same name defined here: ' . implode(',', $common), E_USER_WARNING);
 		}
+		$this->globs=$this->predefined;
 		return $result;
 	}
 
@@ -550,10 +578,14 @@ class Converter {
 					} else {
 						return 'this';
 					}
-				} elseif ($t[VALUE]=='$class') {
+				} elseif ($t[VALUE] == '$class') {
 					return 'theClass';
+				} elseif ($t[VALUE] == '$type') {
+					return 'theType';
 				} else {
-					return substr($t[VALUE], 1); // strip the $
+					$var=substr($t[VALUE], 1);
+					if (!$this->firstPass && in_array($var, $this->globs)) return 'php.Globals.' . $var;
+					else return $var; // strip the $
 				}
 			
 			case T_VAR : // var classes and objects
@@ -581,7 +613,7 @@ class Converter {
 				}
 			
 			case T_CONSTANT_ENCAPSED_STRING : // "foo" or 'bar' string syntax
-				return '"' . substr($t[VALUE], 1, -1) . '"';
+				return '"' . str_replace('"', '\"', substr($t[VALUE], 1, -1)) . '"';
 			
 			case T_ENCAPSED_AND_WHITESPACE : // " $a" constant part of string with variables
 				$out=$t[VALUE];
@@ -662,6 +694,9 @@ class Converter {
 					$this->skip($T, T_WHITESPACE);
 					$var=$this->parse($T);
 					return 'this.' . $var;
+				} elseif ($t[VALUE] == 'define' && count($T) >= 2 && $this->match($T[0], '(') && $this->match($T[1], T_CONSTANT_ENCAPSED_STRING)) {
+					$this->addConstant($T[1][VALUE]);
+					return $t[VALUE];
 				} else {
 					return $t[VALUE];
 				}
@@ -669,20 +704,21 @@ class Converter {
 			case T_ELSEIF : // elseif elseif
 				return 'else if';
 			case T_GLOBAL : // skip over global variable scope
-				$global='';
-				$s='// global';
+				$this->globs=$this->predefined;
 				while ( count($T) && !$this->match($T[0], ';') ) {
 					$t=array_shift($T);
-					$s.=is_array($t) ? $t[VALUE] : $t;
+					if ($this->match($t, T_VARIABLE)) $this->globs[]=substr($t[VALUE], 1);
 				}
 				if (count($T)) array_shift($T);
-				return $s;
+				return '//' . implode(',', $this->globs) . "\n";
 			case T_REQUIRE : // require() require()
 			case T_REQUIRE_ONCE : // require_once() require_once()
 			case T_INCLUDE : // include() include()
 			case T_INCLUDE_ONCE : // include_once() include_once()
 				$s='// ' . $t[VALUE] . $this->skip_thru($T, ';');
 				return $s;
+			case T_DIR : // __DIR__ magic constants (available since PHP 5.3.0)
+				return 'new File(".").getCanonicalPath()';
 			case T_COMMENT : // // or #, and /* */ in PHP 5 comments
 			case T_ABSTRACT : // abstract Class Abstraction (available since PHP 5.0.0)
 			case T_AND_EQUAL : // &= assignment operators
@@ -704,7 +740,6 @@ class Converter {
 			case T_DEC : // -- incrementing/decrementing operators
 			case T_DECLARE : // declare declare
 			case T_DEFAULT : // default switch
-			case T_DIR : // __DIR__ magic constants (available since PHP 5.3.0)
 			case T_DIV_EQUAL : // /= assignment operators
 			case T_DNUMBER : // 0.12, etc floating point numbers
 			case T_DOC_COMMENT : // /** */ PHPDoc style comments (available since PHP 5.0.0)
@@ -802,12 +837,25 @@ class Converter {
 	 */
 	public function convert($code) {
 		$T=token_get_all($code);
-		$result='';
-		$result.="import php._;\n";
-		$result.="import scala.Predef.{ any2ArrowAssoc => _ }\n\n";
 		
-		$result.=$this->scan_globals($T);
+		$result='';
+		if ($this->package) $result.="package {$this->package}\n\n";
+		if (count($this->packagesToInclude)) {
+			foreach ($this->packagesToInclude as $package) {
+				$result.="import $package._\n";
+			}
+		}
+		$result.="import php._;\n";
+		$result.="import scala.Predef.{ any2ArrowAssoc => _ }\n";
+		$result.="import java.io.File\n";
+		$result.="\n";
+		if ($this->firstPass) {
+			$this->scan_globals($T);
+			$this->scan_global_keyword($T);
+		}
 		$result.=$this->parse_all($T);
+		ksort($this->constants);
+		ksort($this->globals);
 		return $result;
 	}
 
@@ -851,5 +899,40 @@ class Converter {
 		} else {
 			print_r($token);
 		}
+	}
+
+	function createGlobalsTrait($fileName) {
+		$input=file_get_contents('templates/globals.scala');
+		$result='';
+		// $var='';
+		foreach ($this->globals as $constant) {
+			// if ($var) $var.=", ";
+			// $var.="($constant,\"\")";
+			// $result.="\tdef $constant : String = { return globals(\"$constant\") }\n";
+			$result.="\tvar $constant : ref = null\n";
+		}
+		// $result.="\tvar globals = collection.mutable.Map( $var )\n";
+		
+		$output=str_replace('//%globals%', "\n" . $result, $input);
+		if (!file_exists(dirname($fileName))) mkdir(dirname($fileName));
+		file_put_contents($fileName, $output);
+		// return $result;
+	}
+
+	function createConstantsTrait($fileName) {
+		$input=file_get_contents('templates/constants.scala');
+		$result='';
+		// $var='';
+		foreach ($this->constants as $constant) {
+			// if ($var) $var.=", ";
+			// $var.="($constant,\"\")";
+			$result.="\tdef $constant : Value = { return constant(\"$constant\") }\n";
+		}
+		// $result.="\tvar constants = collection.mutable.Map( $var )\n";
+		
+		$output=str_replace('//%constants%', "\n" . $result, $input);
+		if (!file_exists(dirname($fileName))) mkdir(dirname($fileName));
+		file_put_contents($fileName, $output);
+		// return $result;
 	}
 }
