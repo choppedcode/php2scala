@@ -10,6 +10,7 @@
 
 package php
 
+import java.io._
 import phplib._;
 import com.caucho.quercus.env._;
 import scala.collection.mutable.Map;
@@ -247,7 +248,12 @@ abstract class script extends phplib(quercus_context.env) {
   implicit def phpToBoolean(a: ref): Boolean = a.toBoolean
   implicit def quercusToPhp(v: Value): ref = new quercus_ref(v)
   implicit def phpToStringValue(a: ref): StringValue = a.value.toString(quercus_context.env)
-
+  implicit def quercusToString(v: Value): String = v.value.toString
+  implicit def stringValueToBoolean(v: StringValue): Boolean = v.length() > 0
+  implicit def booleanToValue(v: Boolean): Value = if (v) return 1; else return 0
+  //implicit def stringValueToQuercus(s: StringValue): Value = new ConstStringValue(s)
+  implicit def quercusToStringValue(v: Value): StringValue = v.value.toString
+  implicit def quercusToBoolean(v: Value): Boolean = v.length() > 0  
   def anyToQuercus(a: Any): ref = {
     a match {
       case i: Int => i;
@@ -285,5 +291,18 @@ abstract class script extends phplib(quercus_context.env) {
   def next(v: ref) = v.value.next
   //the following line doesn't compile
   //def count(v: ref): ref = new quercus_ref(new LongValue(count(v.value, 0)))
-
+  
+  //Check this code
+  def empty(v: ref) = !v.value.isset || !v
+  
+  def dirname(v: String) : String = return new File(v).getCanonicalPath()
+  
+  //Check this code
+  def file_exists(v: String) : Boolean = return true;
+  
+  //Check this code
+  def unset(v: ref) : Boolean = return true;
+  
+  def ioncube_file_is_encoded() : Boolean = return false;
+  def ioncube_license_properties() : ref = return null;
 }
