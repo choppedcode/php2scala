@@ -13,16 +13,17 @@ The functions are made available directly by name and with the same parameter si
 
 ## Generate the php-scala.jar
 
+Copy Caucho's Quercus source code in the directory quercus/src.
+
 Run 
 ```
 export SCALA_HOME='...'
-ant -Dquercus.src='...' -Dlib='...'
+ant -Dlib='...'
 ```
 
 where:
 * SCALA_HOME is the home directory of your Scala installation. For example for Scala installed on OSX with brew, this is '/usr/local/opt/scala/libexec'
-* quercus.src is the directory containing the Quercus source (latest version can be downloaded from http://quercus.caucho.com/)
-* lib is the destination directory where the php-scala.jar will be generated but also the directory containing the required libraries quercus.jar and javaee-16.jar 
+* lib is the directory containing the required libraries quercus.jar and javaee-16.jar 
 
 # Notes
 Below is a description of the some of the more interesting transformations that are performed in the conversion from PHP to Scala.
@@ -76,6 +77,16 @@ These are handled as Scala triple-quoted strings. Not a lot of testing done yet 
 ## eval()
 
 Quercus has its own PHP parser and interpreter (in Java), which includes full support for eval. This just hasn't been integrated or tested with php-to-scala yet, but it should work with minimal effort.
+
+## __DIR__
+The __DIR__ constant is replaced with new File(".").getCanonicalPath()
+
+# Limitations
+## @ error control operator
+Should be removed from the code.
+
+## require, require_once, include, include_once
+Is bypassed by the convertor. Best to use a dynamic class loader in PHP.
 
 # License
 

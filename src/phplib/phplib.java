@@ -1,6 +1,7 @@
 package phplib;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.math.BigDecimal;
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -207,8 +208,8 @@ final public Value array_product (ArrayValue array) {
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_push */
-final public int array_push (Value array,Value[] values) {
- return com.caucho.quercus.lib.ArrayModule.array_push (quercus_context,array,values);
+final public int array_push (Value array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_push (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
@@ -305,8 +306,8 @@ final public Value array_unique (ArrayValue array) {
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_unshift */
-final public Value array_unshift (Value value,Value[] values) {
- return com.caucho.quercus.lib.ArrayModule.array_unshift (quercus_context,value,values);
+final public Value array_unshift (Value value, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_unshift (quercus_context,value,new Value[] {arg1,arg2});
 }
 
 
@@ -489,8 +490,8 @@ final public Value extract (ArrayValue array, long rawType) {
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_diff */
-final public Value array_diff (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_diff (quercus_context,array,arrays);
+final public Value array_diff (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_diff (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
@@ -501,122 +502,122 @@ final public ArrayValue array_fill_keys (ArrayValue keyArray,Value value) {
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_diff_assoc */
-final public Value array_diff_assoc (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_diff_assoc (quercus_context,array,arrays);
+final public Value array_diff_assoc (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_diff_assoc (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_diff_key */
-final public Value array_diff_key (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_diff_key (quercus_context,array,arrays);
+final public Value array_diff_key (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_diff_key (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_diff_uassoc */
-final public Value array_diff_uassoc (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_diff_uassoc (quercus_context,array,arrays);
+final public Value array_diff_uassoc (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_diff_uassoc (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_diff_ukey */
-final public Value array_diff_ukey (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_diff_ukey (quercus_context,array,arrays);
+final public Value array_diff_ukey (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_diff_ukey (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_intersect */
-final public Value array_intersect (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_intersect (quercus_context,array,arrays);
+final public Value array_intersect (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_intersect (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_intersect_assoc */
-final public Value array_intersect_assoc (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_intersect_assoc (quercus_context,array,arrays);
+final public Value array_intersect_assoc (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_intersect_assoc (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_intersect_key */
-final public Value array_intersect_key (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_intersect_key (quercus_context,array,arrays);
+final public Value array_intersect_key (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_intersect_key (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_intersect_uassoc */
-final public Value array_intersect_uassoc (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_intersect_uassoc (quercus_context,array,arrays);
+final public Value array_intersect_uassoc (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_intersect_uassoc (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_intersect_ukey */
-final public Value array_intersect_ukey (ArrayValue array,Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_intersect_ukey (quercus_context,array,arrays);
+final public Value array_intersect_ukey (ArrayValue array, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_intersect_ukey (quercus_context,array,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_map */
-final public Value array_map (Callable fun,ArrayValue arg,Value[] args) {
- return com.caucho.quercus.lib.ArrayModule.array_map (quercus_context,fun,arg,args);
+final public Value array_map (Callable fun, ArrayValue arg, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_map (quercus_context,fun,arg,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_merge */
-final public Value array_merge (Value[] args) {
- return com.caucho.quercus.lib.ArrayModule.array_merge (quercus_context,args);
+final public Value array_merge (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_merge (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_merge_recursive */
-final public Value array_merge_recursive (Value[] args) {
- return com.caucho.quercus.lib.ArrayModule.array_merge_recursive (quercus_context,args);
+final public Value array_merge_recursive (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_merge_recursive (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_multisort */
-final public boolean array_multisort (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_multisort (quercus_context,arrays);
+final public boolean array_multisort (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_multisort (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_udiff */
-final public Value array_udiff (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_udiff (quercus_context,arrays);
+final public Value array_udiff (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_udiff (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_udiff_assoc */
-final public Value array_udiff_assoc (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_udiff_assoc (quercus_context,arrays);
+final public Value array_udiff_assoc (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_udiff_assoc (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_udiff_uassoc */
-final public Value array_udiff_uassoc (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_udiff_uassoc (quercus_context,arrays);
+final public Value array_udiff_uassoc (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_udiff_uassoc (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_uintersect */
-final public Value array_uintersect (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_uintersect (quercus_context,arrays);
+final public Value array_uintersect (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_uintersect (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_uintersect_assoc */
-final public Value array_uintersect_assoc (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_uintersect_assoc (quercus_context,arrays);
+final public Value array_uintersect_assoc (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_uintersect_assoc (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : array_uintersect_uassoc */
-final public Value array_uintersect_uassoc (Value[] arrays) {
- return com.caucho.quercus.lib.ArrayModule.array_uintersect_uassoc (quercus_context,arrays);
+final public Value array_uintersect_uassoc (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.array_uintersect_uassoc (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/ArrayModule.java : compact */
-final public ArrayValue compact (Value[] variables) {
- return com.caucho.quercus.lib.ArrayModule.compact (quercus_context,variables);
+final public ArrayValue compact (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ArrayModule.compact (quercus_context,new Value[] {arg1,arg2});
 }
 
 
@@ -732,8 +733,8 @@ final public String bcsub (Value value1, Value value2) {
 
 
 /* ./com/caucho/quercus/lib/ClassesModule.java : call_user_method */
-final public Value call_user_method (StringValue name,Value obj,Value[] args) {
- return com.caucho.quercus.lib.ClassesModule.call_user_method (quercus_context,name,obj,args);
+final public Value call_user_method (StringValue name, Value obj, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.ClassesModule.call_user_method (quercus_context,name,obj,new Value[] {arg1,arg2});
 }
 
 
@@ -1355,8 +1356,8 @@ final public boolean mysqli_autocommit (@NotNull Mysqli conn,boolean mode) {
 
 
 /* ./com/caucho/quercus/lib/db/MysqliModule.java : mysqli_bind_param */
-final public boolean mysqli_bind_param (@NotNull MysqliStatement stmt,StringValue types,Value[] params) {
- return com.caucho.quercus.lib.db.MysqliModule.mysqli_bind_param (quercus_context,stmt,types,params);
+final public boolean mysqli_bind_param (@NotNull MysqliStatement stmt, StringValue types, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.db.MysqliModule.mysqli_bind_param (quercus_context,stmt,types,new Value[] {arg1,arg2});
 }
 
 
@@ -1764,14 +1765,14 @@ final public int mysqli_stmt_affected_rows (@NotNull MysqliStatement stmt) {
 
 
 /* ./com/caucho/quercus/lib/db/MysqliModule.java : mysqli_stmt_bind_param */
-final public boolean mysqli_stmt_bind_param (@NotNull MysqliStatement stmt,StringValue types,Value[] params) {
- return com.caucho.quercus.lib.db.MysqliModule.mysqli_stmt_bind_param (quercus_context,stmt,types,params);
+final public boolean mysqli_stmt_bind_param (@NotNull MysqliStatement stmt, StringValue types, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.db.MysqliModule.mysqli_stmt_bind_param (quercus_context,stmt,types,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/db/MysqliModule.java : mysqli_stmt_bind_result */
-final public boolean mysqli_stmt_bind_result (@NotNull MysqliStatement stmt,Value[] outParams) {
- return com.caucho.quercus.lib.db.MysqliModule.mysqli_stmt_bind_result (quercus_context,stmt,outParams);
+final public boolean mysqli_stmt_bind_result (@NotNull MysqliStatement stmt, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.db.MysqliModule.mysqli_stmt_bind_result (quercus_context,stmt,new Value[] {arg1,arg2});
 }
 
 
@@ -1794,8 +1795,8 @@ final public boolean mysqli_stmt_free_result (MysqliStatement stmt) {
 
 
 /* ./com/caucho/quercus/lib/db/MysqliModule.java : mysqli_bind_result */
-final public boolean mysqli_bind_result (@NotNull MysqliStatement stmt,Value[] outParams) {
- return com.caucho.quercus.lib.db.MysqliModule.mysqli_bind_result (quercus_context,stmt,outParams);
+final public boolean mysqli_bind_result (@NotNull MysqliStatement stmt, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.db.MysqliModule.mysqli_bind_result (quercus_context,stmt,new Value[] {arg1,arg2});
 }
 
 
@@ -4479,13 +4480,8 @@ final public Value fread (@NotNull BinaryInput is,int length) {
 
 
 /* ./com/caucho/quercus/lib/file/FileModule.java : fscanf */
-final public Value fscanf (@NotNull BinaryInput is,StringValue format,@Optional Value[] args) {
- return com.caucho.quercus.lib.file.FileModule.fscanf (quercus_context,is,format,args);
-}
-final public Value fscanf (@NotNull BinaryInput is, StringValue format) {
- Value[] args = null;
-
- return com.caucho.quercus.lib.file.FileModule.fscanf (quercus_context,is,format,args);
+final public Value fscanf (@NotNull BinaryInput is, StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.file.FileModule.fscanf (quercus_context,is,format,new Value[] {arg1,arg2});
 }
 
 
@@ -5025,8 +5021,8 @@ final public boolean stream_wrapper_unregister (StringValue protocol) {
 
 
 /* ./com/caucho/quercus/lib/FunctionModule.java : call_user_func */
-final public Value call_user_func (Callable function,Value[] args) {
- return com.caucho.quercus.lib.FunctionModule.call_user_func (quercus_context,function,args);
+final public Value call_user_func (Callable function, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.FunctionModule.call_user_func (quercus_context,function,new Value[] {arg1,arg2});
 }
 
 
@@ -5073,8 +5069,8 @@ final public Value get_defined_functions () {
 
 
 /* ./com/caucho/quercus/lib/FunctionModule.java : register_shutdown_function */
-final public Value register_shutdown_function (Callable fun,Value[] args) {
- return com.caucho.quercus.lib.FunctionModule.register_shutdown_function (quercus_context,fun,args);
+final public Value register_shutdown_function (Callable fun, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.FunctionModule.register_shutdown_function (quercus_context,fun,new Value[] {arg1,arg2});
 }
 
 
@@ -6593,8 +6589,8 @@ final public void png2wbmp (String pngFilename,String wbmpName,int d_height,int 
 
 
 /* ./com/caucho/quercus/lib/JavaModule.java : java */
-final public Object java (String className,Value[] args) {
- return com.caucho.quercus.lib.JavaModule.java (quercus_context,className,args);
+final public Object java (String className, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.JavaModule.java (quercus_context,className,new Value[] {arg1,arg2});
 }
 
 
@@ -6807,14 +6803,14 @@ final public Value getrandmax () {
 
 
 /* ./com/caucho/quercus/lib/MathModule.java : max */
-final public Value max (Value[] args) {
- return com.caucho.quercus.lib.MathModule.max (quercus_context,args);
+final public Value max (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.MathModule.max (quercus_context,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/MathModule.java : min */
-final public Value min (Value[] args) {
- return com.caucho.quercus.lib.MathModule.min (quercus_context,args);
+final public Value min (Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.MathModule.min (quercus_context,new Value[] {arg1,arg2});
 }
 
 
@@ -8574,8 +8570,8 @@ final public Value explode (StringValue separator, StringValue string) {
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : fprintf */
-final public Value fprintf (@NotNull BinaryOutput os,StringValue format,Value[] args) {
- return com.caucho.quercus.lib.string.StringModule.fprintf (quercus_context,os,format,args);
+final public Value fprintf (@NotNull BinaryOutput os, StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.fprintf (quercus_context,os,format,new Value[] {arg1,arg2});
 }
 
 
@@ -8684,8 +8680,8 @@ final public long print (Value value) {
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : printf */
-final public int printf (StringValue format,Value[] args) {
- return com.caucho.quercus.lib.string.StringModule.printf (quercus_context,format,args);
+final public int printf (StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.printf (quercus_context,format,new Value[] {arg1,arg2});
 }
 
 
@@ -8713,8 +8709,8 @@ final public StringValue rtrim (StringValue string) {
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : setlocale */
-final public Value setlocale (int category,Value localeArg,Value[] fallback) {
- return com.caucho.quercus.lib.string.StringModule.setlocale (quercus_context,category,localeArg,fallback);
+final public Value setlocale (int category, Value localeArg, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.setlocale (quercus_context,category,localeArg,new Value[] {arg1,arg2});
 }
 
 
@@ -8747,30 +8743,20 @@ final public Value soundex (StringValue string) {
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : sprintf */
-final public Value sprintf (StringValue format,Value[] args) {
- return com.caucho.quercus.lib.string.StringModule.sprintf (quercus_context,format,args);
+final public Value sprintf (StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.sprintf (quercus_context,format,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : sscanf */
-final public Value sscanf (StringValue string,StringValue format,@Optional Value[] args) {
- return com.caucho.quercus.lib.string.StringModule.sscanf (quercus_context,string,format,args);
-}
-final public Value sscanf (StringValue string, StringValue format) {
- Value[] args = null;
-
- return com.caucho.quercus.lib.string.StringModule.sscanf (quercus_context,string,format,args);
+final public Value sscanf (StringValue string, StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.sscanf (quercus_context,string,format,new Value[] {arg1,arg2});
 }
 
 
 /* ./com/caucho/quercus/lib/string/StringModule.java : sscanfOld */
-final public Value sscanfOld (StringValue string,StringValue format,@Optional Value[] args) {
- return com.caucho.quercus.lib.string.StringModule.sscanfOld (quercus_context,string,format,args);
-}
-final public Value sscanfOld (StringValue string, StringValue format) {
- Value[] args = null;
-
- return com.caucho.quercus.lib.string.StringModule.sscanfOld (quercus_context,string,format,args);
+final public Value sscanfOld (StringValue string, StringValue format, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.string.StringModule.sscanfOld (quercus_context,string,format,new Value[] {arg1,arg2});
 }
 
 
@@ -9507,8 +9493,8 @@ final public Value unserialize (StringValue s) {
 
 
 /* ./com/caucho/quercus/lib/VariableModule.java : var_dump */
-final public Value var_dump (@PassThru @ReadOnly Value v,Value[] args) {
- return com.caucho.quercus.lib.VariableModule.var_dump (quercus_context,v,args);
+final public Value var_dump (@PassThru @ReadOnly Value v, Value arg1, Value arg2) {
+ return com.caucho.quercus.lib.VariableModule.var_dump (quercus_context,v,new Value[] {arg1,arg2});
 }
 
 

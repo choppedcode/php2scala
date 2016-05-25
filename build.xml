@@ -4,6 +4,7 @@
 	<property environment="env"/>
 	<property name="scala.home" value="${env.SCALA_HOME}" />
 	<property name="shell" value="/bin/sh" />
+	<property name="quercus.src" value="quercus/src/modules/quercus/src" />
 
 	<property name="bin" value="${basedir}/bin" />
 
@@ -44,6 +45,10 @@
 		</uptodate>
 		<antcall target="mklib" />
 	</target>
+	
+	<target name="copylib">
+		<copy file="src/phplib/phplib.java" tofile="${copy}/src/phplib/phplib.java" />
+	</target>
 
 	<target name="compile" depends="init,phplib">
 		<mkdir dir="${bin}" />
@@ -57,7 +62,7 @@
 
 	<target name="jar" depends="compile">
 		<mkdir dir="${lib}" />
-		<jar destfile="${lib}/php-scala.jar" basedir="${bin}">
+		<jar destfile="lib/php-scala.jar" basedir="${bin}">
 		</jar>
 	</target>
 

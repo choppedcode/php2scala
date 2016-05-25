@@ -11,6 +11,7 @@ cat <<EOF
 package phplib;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.math.BigDecimal;
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -69,7 +70,6 @@ xargs perl -0777 -lne 'top:while(/public\s+static\s+(\w*)\s+(\w*)\s*\(\s*(.*?)\)
     $parms =~ s/^Env\s+env,?\s*//;
   }
   elsif ($parms =~ /^(ResultSet)/) {
-  #print "// $parms\n";
     next top;
   }
   #elsif ($parms !~ /^(Value|double|StringValue)/) {
@@ -90,6 +90,19 @@ xargs perl -0777 -lne 'top:while(/public\s+static\s+(\w*)\s+(\w*)\s*\(\s*(.*?)\)
     next top;
   }
 
+	if ($parms =~ /Value\[\]/) {
+		my @parms = split(/,/, $parms);
+		my $i=0;
+		for my $p (@parms) {
+			$i++;
+			if ($p =~ /Value\[\]/) {
+				#print "//++".$p."++\n";
+				@names[$i]="new Value[] {arg1,arg2}";
+				@parms[$i-1] ="Value arg1, Value arg2"
+			}
+		}
+		$parms = join(", ", @parms);
+	}
   print "final public $type $name ($parms) {\n $return $class.$name (" . join(",", @names) . ");\n}\n";
 
   if($parms =~ /\@Optional/ && $parms !~ /\@Expect/) {
@@ -101,7 +114,7 @@ xargs perl -0777 -lne 'top:while(/public\s+static\s+(\w*)\s+(\w*)\s*\(\s*(.*?)\)
        if($p =~ /^\s*\@Optional(?:\((.*?)\))?\s+([\w\[\]]*)\s+(\w*)/) {
 	       ($odefault, $otype, $oname) = ($1, $2, $3);
 
-		   #print $odefault."-". $otype."-". $oname."\n";
+		   #print "//** ".$odefault."-". $otype."-". $oname." **\n";
 
 	       if($otype =~ /int|float|double/ && $odefault =~ /^"([\-\d]+?)"$/) { 
 	           $odefault =~ s/"(.*?)"/$1/;
