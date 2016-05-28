@@ -25,9 +25,11 @@ class Converter {
 	private $classMethods=array();
 	var $constants=array();
 	var $globs=array();
+	var $constantCategories=array('Core','curl');
+	var $excludeConstants=array('PHP_EOL');
 
 	function is_global($var) {
-		return in_array($var, $this->globals);
+		return in_array($var, $this->globs);
 	}
 
 	function match($token1, $ttype) {
@@ -215,7 +217,7 @@ class Converter {
 				if (!isset($vars[$name]) && !$this->is_global($name)) {
 					$out.="\nvar $name: $type = $default;";
 					$vars[$name]=1;
-					if ($setGlobal) $this->addGlobal($name);
+					// if ($setGlobal) $this->addGlobal($name);
 				}
 			} else {
 				array_shift($T);
@@ -224,32 +226,35 @@ class Converter {
 		return $out;
 	}
 
-	function scan_globals($T) {
-		$out='';
-		$vars=array();
-		$global=array();
-		
-		while ( count($T) ) {
-			if ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
-				// skip over non-global scope
-				do {
-					$t=array_shift($T);
-				} while ( $t != '{' && count($T) );
-				$this->parse_block_tail($T);
-			} else {
-				$global[]=array_shift($T);
-			}
-		}
-		return $this->scan_vars($global, true);
-	}
+	/*
+	 * function scan_globals($T) {
+	 * $out='';
+	 * $vars=array();
+	 * $global=array();
+	 *
+	 * while ( count($T) ) {
+	 * if ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
+	 * // skip over non-global scope
+	 * do {
+	 * $t=array_shift($T);
+	 * } while ( $t != '{' && count($T) );
+	 * $this->parse_block_tail($T);
+	 * } else {
+	 * $global[]=array_shift($T);
+	 * }
+	 * }
+	 * return $this->scan_vars($global, true);
+	 * }
+	 */
 	
 	// detect globals from global keyword
 	function scan_global_keyword($T) {
 		while ( count($T) ) {
 			if ($this->match($T[0], T_GLOBAL)) {
 				while ( count($T) && !$this->match($T[0], ';') ) {
-					if ($this->match($T[0], T_VARIABLE)) $this->addGlobal($this->parse($T));
-					else $t=array_shift($T);
+					if ($this->match($T[0], T_VARIABLE)) $this->addGlobal(substr($T[0][VALUE], 1));
+					// else
+					$t=array_shift($T);
 				}
 			}
 			$t=array_shift($T);
@@ -257,7 +262,8 @@ class Converter {
 	}
 
 	function addGlobal($global) {
-		if ($this->firstPass && !in_array($global, $this->globals)) $this->globals[]=$global;
+		if (!in_array($global, $this->globals)) $this->globals[]=$global;
+		if (!in_array($global, $this->globs)) $this->globs[]=$global;
 	}
 
 	function addConstant($constant) {
@@ -290,8 +296,12 @@ class Converter {
 		if ($this->contains($body, T_RETURN)) {
 			$out.=' : ' . $this->anyType . ' = ';
 		}
+		$this->globs=$this->predefined;
+		$this->scan_global_keyword($body);
 		$vars=$this->scan_vars($body);
-		return $out . '{' . $vars . "\n" . $this->parse_all($body) . '}';
+		$f=$out . '{' . $vars . "\n" . $this->parse_all($body) . '}';
+		$this->globs=$this->predefined;
+		return $f;
 	}
 
 	function parse_vars(&$T, $scope='') {
@@ -377,7 +387,7 @@ class Converter {
 	}
 
 	function parse_class(&$T) {
-		$this->globs=$this->predefined;
+		// $this->globs=$this->predefined;
 		$this->classVars=array();
 		$this->classMethods=array();
 		$this->skip($T, T_WHITESPACE);
@@ -466,7 +476,7 @@ class Converter {
 		if (count($common)) {
 			trigger_error('Methods and variables with the same name defined here: ' . implode(',', $common), E_USER_WARNING);
 		}
-		$this->globs=$this->predefined;
+		// $this->globs=$this->predefined;
 		return $result;
 	}
 
@@ -503,6 +513,10 @@ class Converter {
 			}
 		}
 		return PHP_INT_MAX;
+	}
+
+	private function val($t) {
+		return is_array($t) ? $t[VALUE] : $t;
 	}
 
 	private function getNextVarIndex($T) {
@@ -584,7 +598,7 @@ class Converter {
 					return 'theType';
 				} else {
 					$var=substr($t[VALUE], 1);
-					if (!$this->firstPass && in_array($var, $this->globs)) return 'php.Globals.' . $var;
+					if (in_array($var, $this->globs)) return 'php.Globals.' . $var;
 					else return $var; // strip the $
 				}
 			
@@ -704,13 +718,13 @@ class Converter {
 			case T_ELSEIF : // elseif elseif
 				return 'else if';
 			case T_GLOBAL : // skip over global variable scope
-				$this->globs=$this->predefined;
+				$globs=array();
 				while ( count($T) && !$this->match($T[0], ';') ) {
 					$t=array_shift($T);
-					if ($this->match($t, T_VARIABLE)) $this->globs[]=substr($t[VALUE], 1);
+					if ($this->match($t, T_VARIABLE)) $globs[]=substr($t[VALUE], 1);
 				}
 				if (count($T)) array_shift($T);
-				return '//' . implode(',', $this->globs) . "\n";
+				return '//' . implode(',', $globs) . "\n";
 			case T_REQUIRE : // require() require()
 			case T_REQUIRE_ONCE : // require_once() require_once()
 			case T_INCLUDE : // include() include()
@@ -719,6 +733,57 @@ class Converter {
 				return $s;
 			case T_DIR : // __DIR__ magic constants (available since PHP 5.3.0)
 				return 'new File(".").getCanonicalPath()';
+			case T_SWITCH : // switch switch
+				$s='';
+				$this->expect($T, '(');
+				$s=$this->parse_expr_tail($T) . ' match ';
+				$this->expect($T, '{');
+				$s.="{\n";
+				$this->skip($T, T_WHITESPACE);
+				$conditions=array();
+				while ( count($T) && !$this->match($T[0], '}') ) {
+					if ($this->match($T[0], T_CASE)) {
+						array_shift($T);
+						$block=array();
+						while (count($T) && !$this->match($T[0],':')) {
+							$block[]=$T[0];
+							array_shift($T);
+						}
+						array_shift($T);
+						$conditions[]=$this->parse_all($block);
+					} elseif ($this->match($T[0], T_DEFAULT)) {
+						array_shift($T);
+						$e=$this->skip_thru($T, ':');
+						if (trim($e) != '') throw new Exception("Expected: blank got: $e");
+						$conditions[]="_";
+					} else {
+						throw new Exception('Expected: ' . $this->display(T_CASE) . " or " . $this->display(T_DEFAULT) . " got: " . ($this->display($T[0])));
+					}
+					$level=0;
+					$e='';
+					$block=array();
+					while ( count($T) && !$this->match($T[0], T_CASE) && !$this->match($T[0], T_DEFAULT) && !$this->match($T[0], '}') && $level == 0 ) {
+						$c=array_shift($T);
+						if ($this->match($c, '{')) $level++;
+						elseif ($level > 0 && $this->match($c, '}')) $level--;
+						if ($this->match($c, T_BREAK)) {
+							$this->skip_thru($T, ';');
+							$this->skip($T, T_WHITESPACE);
+							continue;
+						}
+						$e.=$this->val($c);
+						$block[]=$c;
+					}
+					if (trim($e) != '') {
+						$s.="case " . implode('|', $conditions) . " =>";
+						$s.=$this->parse_all($block) . "\n";
+						$conditions=array();
+					}
+					$this->skip($T, T_WHITESPACE);
+				}
+				$s.="}\n";
+				array_shift($T);
+				return $s;
 			case T_COMMENT : // // or #, and /* */ in PHP 5 comments
 			case T_ABSTRACT : // abstract Class Abstraction (available since PHP 5.0.0)
 			case T_AND_EQUAL : // &= assignment operators
@@ -806,7 +871,6 @@ class Converter {
 			case T_STATIC : // static variable scope
 			case T_STRING_CAST : // (string) type-casting
 			case T_STRING_VARNAME : // "${a complex variable parsed syntax
-			case T_SWITCH : // switch switch
 			case T_THROW : // throw Exceptions (available since PHP 5.0.0)
 			case T_TRY : // try Exceptions (available since PHP 5.0.0)
 			case T_UNSET : // unset() unset()
@@ -849,8 +913,8 @@ class Converter {
 		$result.="import scala.Predef.{ any2ArrowAssoc => _ }\n";
 		$result.="import java.io.File\n";
 		$result.="\n";
-		if ($this->firstPass) {
-			$this->scan_globals($T);
+		if (1 || $this->firstPass) {
+			// $this->scan_globals($T);
 			$this->scan_global_keyword($T);
 		}
 		$result.=$this->parse_all($T);
@@ -929,6 +993,15 @@ class Converter {
 			$result.="\tdef $constant : Value = { return constant(\"$constant\") }\n";
 		}
 		// $result.="\tvar constants = collection.mutable.Map( $var )\n";
+		
+		foreach (get_defined_constants(true) as $cat => $constants) {
+			if (in_array($cat, $this->constantCategories)) {
+				$result.="\t// $cat\n";
+				foreach ($constants as $constant => $value) {
+					if (!in_array($constant, $this->excludeConstants)) $result.="\tval $constant : Value = \"$value\"\n";
+				}
+			}
+		}
 		
 		$output=str_replace('//%constants%', "\n" . $result, $input);
 		if (!file_exists(dirname($fileName))) mkdir(dirname($fileName));
