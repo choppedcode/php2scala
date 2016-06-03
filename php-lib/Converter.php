@@ -16,6 +16,7 @@ class Converter {
 	 *
 	 * @var string
 	 */
+	private $temp=1;
 	private $phpLibName='php';
 	private $anyType='ref'; // Any
 	private $extendClassName='script with Constants'; // 'PHPObject';
@@ -27,6 +28,8 @@ class Converter {
 	var $globs=array();
 	var $constantCategories=array('Core','curl');
 	var $excludeConstants=array('PHP_EOL');
+	private $functionArgs=array();
+	private $vars=array();
 
 	function is_global($var) {
 		return in_array($var, $this->globs);
@@ -50,7 +53,7 @@ class Converter {
 	}
 
 	function skip(&$T, $ttype) {
-		while ( $this->match($T[0], $ttype) ) {
+		while ( count($T) && $this->match($T[0], $ttype) ) {
 			array_shift($T);
 		}
 	}
@@ -92,17 +95,19 @@ class Converter {
 
 	function parse_expr_tail(&$T) {
 		$out='';
-		while ( $T[0] !== ')' && $T[0] !== ';' ) {
-			if ($T[0] === '(') {
+		while ( !$this->match($T[0], ')') && !$this->match($T[0], ';') ) {
+			if ($this->match($T[0], '(')) {
 				array_shift($T);
 				$out.='(' . $this->parse_expr_tail($T) . ')';
 			} else {
 				$out.=$this->parse($T);
 			}
 		}
-		if ($T[0] != ';') {
-			array_shift($T);
-		}
+		// echo $this->display($T[0]) . chr(10);
+		if (!$this->match($T[0], ';')) {
+			$this->last=array_shift($T);
+		} else
+			$this->last=null;
 		return $out;
 	}
 
@@ -187,65 +192,41 @@ class Converter {
 		return "\n$init_expr;\nwhile($cond_expr) {\n $body_stmt;\n$term_expr\n}\n";
 	}
 
-	function scan_vars($T, $setGlobal=false) { /* type inference and variable declaration */
+	/* type inference and variable declaration */
+	function scan_vars($T) {
 		$out='';
 		$vars=array();
 		
 		while ( count($T) ) {
 			if ($this->match($T[0], T_VARIABLE)) {
-				
 				// $name=$this->parse($T);
-				$name=substr($T[0][VALUE], 1);
+				if (in_array($T[0][VALUE], array('$class','$type','$package'))) $name='the' . ucfirst(substr($T[0][VALUE], 1));
+				else $name=substr($T[0][VALUE], 1);
 				array_shift($T);
 				$this->skip($T, T_WHITESPACE);
 				$t=array_shift($T);
 				
-				if ($t != '=' && $t != '[') {
-					continue;
-				}
-				
 				$type=$this->anyType;
 				$default='null';
-				
-				$this->skip($T, T_WHITESPACE);
-				
-				$u=array_shift($T);
-				if ($this->match($u, T_LNUMBER)) {
-					$type='integer';
-					$default='0';
+				if ($t == '=' || $t == '[') {
+					$this->skip($T, T_WHITESPACE);
+					$u=array_shift($T);
+					if ($this->match($u, T_LNUMBER)) {
+						$type='integer';
+						$default='0';
+					}
 				}
-				if (!isset($vars[$name]) && !$this->is_global($name)) {
-					$out.="\nvar $name: $type = $default;";
-					$vars[$name]=1;
-					// if ($setGlobal) $this->addGlobal($name);
+				if (!in_array($name, $this->functionArgs) && $name != 'this' && !isset($vars[$name]) && !$this->is_global($name)) {
+					// $out.="\nvar $name: $type = $default;";
+					$vars[$name]=array('type' => $type,'default' => $default);
 				}
 			} else {
 				array_shift($T);
 			}
 		}
-		return $out;
+		return $vars;
+		// return $out;
 	}
-
-	/*
-	 * function scan_globals($T) {
-	 * $out='';
-	 * $vars=array();
-	 * $global=array();
-	 *
-	 * while ( count($T) ) {
-	 * if ($this->match($T[0], T_CLASS) || $this->match($T[0], T_FUNCTION)) {
-	 * // skip over non-global scope
-	 * do {
-	 * $t=array_shift($T);
-	 * } while ( $t != '{' && count($T) );
-	 * $this->parse_block_tail($T);
-	 * } else {
-	 * $global[]=array_shift($T);
-	 * }
-	 * }
-	 * return $this->scan_vars($global, true);
-	 * }
-	 */
 	
 	// detect globals from global keyword
 	function scan_global_keyword($T) {
@@ -253,7 +234,6 @@ class Converter {
 			if ($this->match($T[0], T_GLOBAL)) {
 				while ( count($T) && !$this->match($T[0], ';') ) {
 					if ($this->match($T[0], T_VARIABLE)) $this->addGlobal(substr($T[0][VALUE], 1));
-					// else
 					$t=array_shift($T);
 				}
 			}
@@ -279,6 +259,7 @@ class Converter {
 			$c=$this->parse($T);
 			if ($c != '&') $out.=$c;
 			if ($prev[TTYPE] == T_VARIABLE) {
+				$this->functionArgs[]=substr($prev[VALUE], 1);
 				$out.=' : ' . $this->anyType;
 			}
 		}
@@ -289,6 +270,7 @@ class Converter {
 		if ($scope !== '') {
 			$scope.=' ';
 		}
+		$this->functionArgs=array();
 		$out=$scope . "def" . $this->parse_f_args($T);
 		$this->expect($T, '{');
 		$body=$this->fetch_block($T);
@@ -298,9 +280,18 @@ class Converter {
 		}
 		$this->globs=$this->predefined;
 		$this->scan_global_keyword($body);
-		$vars=$this->scan_vars($body);
-		$f=$out . '{' . $vars . "\n" . $this->parse_all($body) . '}';
+		$this->vars=$this->scan_vars($body);
+		$bodyDef=$this->parse_all($body);
+		$varDef='';
+		if (count($this->vars) > 0) {
+			foreach ($this->vars as $name => $data) {
+				$varDef.="\nvar $name: {$data['type']} = {$data['default']};";
+			}
+		}
+		$f=$out . '{' . $varDef . "\n" . $bodyDef . '}';
 		$this->globs=$this->predefined;
+		$this->functionArgs=array();
+		$this->vars=array();
 		return $f;
 	}
 
@@ -312,8 +303,10 @@ class Converter {
 		while ( $T[0] != ';' ) {
 			if ($T[0][TTYPE] == T_VARIABLE) {
 				$var=$this->parse($T);
-				$this->classVars[]=$var;
-				$out.=$scope . 'var ' . $var . ' : ' . $this->anyType . ' = null;';
+				if (!in_array($var, $this->functionArgs)) {
+					$this->classVars[]=$var;
+					$out.=$scope . 'var ' . $var . ' : ' . $this->anyType . ' = null;';
+				}
 			} else {
 				array_shift($T);
 			}
@@ -384,6 +377,20 @@ class Converter {
 			array_shift($T);
 		}
 		return $out;
+	}
+
+	function isVariableDefinition($T) {
+		if ($this->peek($T, '=')) {
+			$level=0;
+			while ( count($T) ) {
+				if ($this->match($T[0], '(')) $level++;
+				elseif ($this->match($T[0], ')') && $level == 0) return false;
+				elseif ($this->match($T[0], ')')) $level--;
+				elseif ($this->match($T[0], ';')) return true;
+				array_shift($T);
+			}
+		}
+		return false;
 	}
 
 	function parse_class(&$T) {
@@ -549,11 +556,15 @@ class Converter {
 				
 				case '?' :
 					$choices=$this->parse_expr_tail($T);
-					return " |? { if(_) $choices }";
-				
+					$out=" |? { if(_) $choices }";
+					if ($this->match($this->last, ')')) $out.=')';
+					return $out;
 				case ':' :
 					return " else ";
 				
+				case '@':
+					if ($this->peek($T,T_STRING)) return '';
+					
 				default :
 					return $t;
 			}
@@ -592,14 +603,17 @@ class Converter {
 					} else {
 						return 'this';
 					}
-				} elseif ($t[VALUE] == '$class') {
-					return 'theClass';
-				} elseif ($t[VALUE] == '$type') {
-					return 'theType';
+				} elseif (in_array($t[VALUE], array('$class','$type','$package'))) {
+					$var='the' . ucfirst(substr($t[VALUE], 1));
 				} else {
 					$var=substr($t[VALUE], 1);
 					if (in_array($var, $this->globs)) return 'php.Globals.' . $var;
-					else return $var; // strip the $
+				}
+				if (isset($this->vars[$var]) && $this->isVariableDefinition($T)) {
+					if (isset($this->vars[$var])) unset($this->vars[$var]);
+					return "var $var";
+				} else {
+					return $var;
 				}
 			
 			case T_VAR : // var classes and objects
@@ -745,7 +759,7 @@ class Converter {
 					if ($this->match($T[0], T_CASE)) {
 						array_shift($T);
 						$block=array();
-						while (count($T) && !$this->match($T[0],':')) {
+						while ( count($T) && !$this->match($T[0], ':') ) {
 							$block[]=$T[0];
 							array_shift($T);
 						}
@@ -783,6 +797,21 @@ class Converter {
 				}
 				$s.="}\n";
 				array_shift($T);
+				return $s;
+			case T_LIST : // list() list()
+				$this->expect($T, '(');
+				$vars=explode(',', $this->skip_thru($T, ')'));
+				$s="val temp" . $this->temp . " " . $this->parse_expr_tail($T) . "\n";
+				$this->skip_thru($T, ';');
+				foreach ($vars as $i => $v) {
+					$var=substr($v, 1);
+					if (isset($this->vars[$var])) { 
+						unset($this->vars[$var]);
+						$s.="var ";
+					}
+					$s.=$var . " = temp" . $this->temp . "($i)\n";
+				}
+				$this->temp++;
 				return $s;
 			case T_COMMENT : // // or #, and /* */ in PHP 5 comments
 			case T_ABSTRACT : // abstract Class Abstraction (available since PHP 5.0.0)
@@ -842,7 +871,6 @@ class Converter {
 			case T_IS_NOT_IDENTICAL : // !== comparison operators
 			case T_IS_SMALLER_OR_EQUAL : // <= comparison operators
 			case T_LINE : // __LINE__ magic constants
-			case T_LIST : // list() list()
 			case T_LNUMBER : // 123, 012, 0x1ac, etc integers
 			case T_LOGICAL_AND : // and logical operators
 			case T_LOGICAL_OR : // or logical operators

@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../lib/Converter.php';
+require_once __DIR__ . '/../php-lib/Converter.php';
 
 class ConverterTest extends PHPUnit_Framework_TestCase{
     /**
